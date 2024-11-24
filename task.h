@@ -5,17 +5,41 @@
 #ifndef TASK_H
 #define TASK_H
 
-enum task {
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct Task {
+    char* name;
+    enum task_type type;
+    int priority;
+} Task;
+
+
+typedef enum taskType {
     assembling,
     painting,
     carrying
-};
+} TaskType;
 
-enum state {
+
+typedef enum taskState {
     running,
     paused,
     waiting_for_resources,
     completed
-};
+} TaskState;
+
+
+typedef struct Node {
+    Task task;
+    struct Node* next;
+} Node;
+
+
+typedef struct Queue {
+    Node* front;
+    Node* rear;
+} Queue;
+
 
 #endif //TASK_H
