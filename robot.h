@@ -17,9 +17,15 @@
 #define NB_PAINTING_ROBOT 5
 #define NB_CARRYING_ROBOT 5
 
-void Robot(TaskType task);
+typedef enum RobotType {
+    assembling,
+    painting,
+    carrying
+} RobotType;
+
+void Robot(RobotType task);
 void RobotsInit();
-void waitRobots();
+void shutdown();
 
 
 #endif //ROBOT_H

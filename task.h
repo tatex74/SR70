@@ -7,19 +7,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "robot.h"
+
+
+
 
 typedef struct Task {
     char* name;
-    enum task_type type;
+    RobotType robotNeeded;
+    int duration;
     int priority;
 } Task;
 
 
-typedef enum taskType {
-    assembling,
-    painting,
-    carrying
-} TaskType;
+typedef struct BigTask {
+    Task* task;
+} BigTask;
 
 
 typedef enum taskState {
@@ -40,6 +43,13 @@ typedef struct Queue {
     Node* front;
     Node* rear;
 } Queue;
+
+void taskManager();
+Queue* createQueue();
+void enqueue(Queue* q, Task task);
+Task dequeue(Queue* q);
+void displayQueue(const Queue* q);
+void freeQueue(Queue* q);
 
 
 #endif //TASK_H

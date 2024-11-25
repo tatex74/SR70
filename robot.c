@@ -10,7 +10,6 @@ void RobotsInit() {
 
     pid_t pid;
 
-
     for (int i = 0; i < NB_ASSEMBLY_ROBOT; i++) {
         pid = fork();
 
@@ -24,6 +23,7 @@ void RobotsInit() {
             exit(EXIT_SUCCESS);
         }
     }
+
     for (int i = 0; i < NB_PAINTING_ROBOT; i++) {
         pid = fork();
 
@@ -50,10 +50,6 @@ void RobotsInit() {
             exit(EXIT_SUCCESS);
         }
     }
-
-
-    waitRobots();
-
 }
 
 
@@ -62,11 +58,10 @@ void Robot(Task task) {
     Task current_task = task;
 
     while ("la file de tache n'est pas vide");
-
 }
 
 
-void waitRobots() {
+void shutdownRobots() {
     for (int i = 0; i < NB_ASSEMBLY_ROBOT + NB_PAINTING_ROBOT + NB_CARRYING_ROBOT; i++) {
         wait(NULL);
     }

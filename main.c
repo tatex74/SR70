@@ -1,12 +1,11 @@
 #include <stdio.h>
 
+#include "robot.h"
+
 int main(void)
 {
-    printf("Hello, World!\n");
+    RobotsInit();
+    taskManager();
+    shutdown();
     return 0;
-}
-
-
-void taskManager() {
-
 }

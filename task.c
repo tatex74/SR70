@@ -5,8 +5,16 @@
 #include "task.h"
 
 
+void taskManager() {
+    Queue* productionQueue = createQueue();
+
+
+
+    free(productionQueue);
+}
+
 Queue* createQueue() {
-    Queue* q = (Queue*)malloc(sizeof(Queue));
+    Queue* q = (Queue*) malloc(sizeof(Queue));
     q->front = q->rear = NULL;
     return q;
 }
@@ -17,7 +25,7 @@ void enqueue(Queue* q, Task task) {
     newNode->task = task;
     newNode->next = NULL;
 
-    if (q->rear == NULL) { // La file est vide
+    if (q->rear == NULL) {
         q->front = q->rear = newNode;
         return;
     }
