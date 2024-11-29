@@ -10,8 +10,6 @@
 #include "robot.h"
 
 
-
-
 typedef struct Task {
     char* name;
     RobotType robotNeeded;
