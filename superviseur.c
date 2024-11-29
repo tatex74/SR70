@@ -10,19 +10,18 @@
 #include "structures.h"
 #include "superviseur.h"
 
-#define NB_ROBOTS 4
+#define NB_TACHES 10
+#define NB_ROBOTS_PAR_TYPE 1
+#define NB_ROBOTS (NB_ROBOTS_PAR_TYPE * 3)
 
-struct Robot robots[NB_ROBOTS];
+Robot robots[NB_ROBOTS]; // Tableau pour suivre les robots
 volatile sig_atomic_t reponses[NB_ROBOTS]; // Tableau pour suivre les réponses des robots
 
 void superviseur_init() {
     printf("Superviseur: Initialisation du superviseur.\n");
     init_signals();
 
-    for (int i = 0; i < NB_ROBOTS; i++) {
-        create_robot(i);
-        reponses[i] = 0; // Initialisation des drapeaux de réponse
-    }
+    create_all_robots();
 
     sleep(3); // Donne le temps aux robots de s'initialiser
 
@@ -32,24 +31,33 @@ void superviseur_init() {
     }
 }
 
-void create_robot(int i) {
-    int pid = fork();
-    if (pid == 0) {
-        // On envoie l'index du robot en argument
-        char i_str[2];
-        sprintf(i_str, "%d", i);
-        char *args[] = {"./robot", i_str, NULL};
-        if (execvp(args[0], args) == -1) {
-            perror("Superviseur: Erreur lors de l'execution de execvp");
-            exit(1);
+void create_all_robots() {
+    int robot_id = 0;
+    for (int type = 0; type < 3; type++) {
+        for (int i = 0; i < NB_ROBOTS_PAR_TYPE; i++) {
+            create_robot(robot_id, type);
+            robot_id++;
         }
-    } else if (pid > 0) {
-        robots[i].pid = pid;
-        robots[i].enVie = 1;
-        printf("Superviseur: Robot %d créé avec PID %d.\n", i, pid);
+    }
+}
+
+void create_robot(int robot_id, int type) {
+    reponses[robot_id] = 0;
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("Superviseur: Erreur lors de la création du processus fils");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        char type_str[10];
+        sprintf(type_str, "%d", type);
+        char id_str[10];
+        sprintf(id_str, "%d", robot_id);
+        execl("./robot", "./robot", id_str, type_str, NULL);
+        perror("Superviseur: Erreur lors de l'exécution de execl");
+        exit(EXIT_FAILURE);
     } else {
-        perror("Superviseur: Erreur lors du fork");
-        exit(1);
+        robots[robot_id].pid = pid;
+        robots[robot_id].is_alive = 1;
     }
 }
 
@@ -75,11 +83,11 @@ void is_alive_received(int signo, siginfo_t *info, void *context) {
     for (int i = 0; i < NB_ROBOTS; i++) {
         if (robots[i].pid == sender_pid) {
             reponses[i] = 1; // Le robot a répondu
-            printf("Superviseur: Signal reçu de Robot %d (PID: %d), marqué comme vivant.\n", i, sender_pid);
+            // printf("Superviseur: Signal reçu de Robot %d (PID: %d), marqué comme vivant.\n", i, sender_pid);
             return;
         }
     }
-    printf("Superviseur: Signal reçu d'un processus inconnu (PID: %d).\n", sender_pid);
+    // printf("Superviseur: Signal reçu d'un processus inconnu (PID: %d).\n", sender_pid);
 }
 
 void send_signal_to_check_alive() {
@@ -88,17 +96,17 @@ void send_signal_to_check_alive() {
             // Le robot a répondu correctement
             printf("Superviseur: Robot %d (PID: %d) est vivant, tout va bien.\n", i, robots[i].pid);
             reponses[i] = 0; // Réinitialise le drapeau pour le prochain cycle
-        } else if (robots[i].enVie) {
+        } else if (robots[i].is_alive) {
             // Pas de réponse -> marquer comme "en attente de réponse"
-            printf("Superviseur: Envoi d'un signal au Robot %d (PID: %d) pour vérifier qu'il est en vie.\n", i, robots[i].pid);
+            // printf("Superviseur: Envoi d'un signal au Robot %d (PID: %d) pour vérifier qu'il est en vie.\n", i, robots[i].pid);
             if (kill(robots[i].pid, SIGUSR1) == -1) {
                 perror("Superviseur: Erreur lors de l'envoi du signal");
-                robots[i].enVie = 0; // Marque le robot comme mort si le signal échoue
+                robots[i].is_alive = 0; // Marque le robot comme mort si le signal échoue
             }
         } else {
             // Le robot est mort -> le recréer
             printf("Superviseur: Robot %d est mort, création d'un nouveau robot.\n", i);
-            create_robot(i);
+            create_robot(i, robots[i].type_robot);
         }
     }
 }
