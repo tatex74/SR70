@@ -5,6 +5,9 @@
     "shared_memory.h": "c",
     "pthread.h": "c",
     "signal.h": "c",
-    "structures.h": "c"
+    "structures.h": "c",
+    "mman.h": "c",
+    "types.h": "c",
+    "errno.h": "c"
   }
 }

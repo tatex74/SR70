@@ -1,8 +1,11 @@
+// structures.h
+
 #ifndef STRUCTURES_H
 #define STRUCTURES_H
 
-#include <semaphore.h>
+#include <sys/types.h>
 
+#define QUEUE_CAPACITY 100  // Capacité maximale de la file de tâches
 
 // Définition des types de tâches
 typedef enum {
@@ -17,26 +20,21 @@ typedef struct {
     TypeTache type_actuel;  // Type actuel de la tâche (étape en cours)
 } Tache;
 
-// Structure pour un nœud de la file de tâches
-typedef struct Node {
-    Tache tache;            // Tâche contenue dans le nœud
-    struct Node *suivant;   // Pointeur vers le nœud suivant
-} Node;
-
-// Structure pour la file de tâches
+// Structure pour la file de tâches (buffer circulaire)
 typedef struct {
-    Node *tete;             // Tête de la file
-    Node *queue;            // Queue de la file
-    sem_t sem_mutex;        // Sémaphore pour protéger l'accès à la file
-    sem_t sem_taches;       // Sémaphore pour indiquer qu'il y a des tâches dans la file
+    Tache tasks[QUEUE_CAPACITY]; // Tableau fixe pour stocker les tâches
+    int head;                     // Indice de la tête de la file
+    int tail;                     // Indice de la queue de la file
+    char mutex_name[64];          // Nom du sémaphore mutex
+    char items_name[64];          // Nom du sémaphore items
 } FileTaches;
 
 // Structure pour les robots
 typedef struct {
     int id;                 // Identifiant unique du robot
-    int is_alive;           // Indicateur pour savoir si le robot est en vie (1) ou mort (0)
-    TypeTache type_robot;   // Type du robot (assemblage, peinture, vérification)
+    TypeTache type_robot;   // Type du robot
     pid_t pid;              // PID du processus du robot
+    int is_alive;           // Indique si le robot est vivant
 } Robot;
 
 #endif // STRUCTURES_H
