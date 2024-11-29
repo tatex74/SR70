@@ -164,8 +164,6 @@ void init_taches(int nombre_de_taches) {
 
 void superviseur_loop() {
     while (1) {
-        check_robots_alive(); // Vérifie si les robots sont vivants
-
         // Vérifier si toutes les tâches ont été traitées
         int taches_restantes = 0;
         for (int i = 0; i < 3; i++) {
@@ -223,30 +221,9 @@ void create_robot(int robot_id, int type) {
     }
 }
 
-void check_robots_alive() {
-    for (int i = 0; i < NB_ROBOTS; i++) {
-        if (robots[i].is_alive) {
-            // Vérifie si le robot est vivant en utilisant kill(pid, 0)
-            if (kill(robots[i].pid, 0) == -1) {
-                if (errno == ESRCH) {
-                    // Le processus n'existe plus
-                    printf("Superviseur: Robot %d (PID: %d) est mort, création d'un nouveau robot.\n", i, robots[i].pid);
-                    robots[i].is_alive = 0;
-                    create_robot(i, robots[i].type_robot);
-                } else {
-                    // Une autre erreur est survenue
-                    perror("Superviseur: Erreur lors de la vérification du robot");
-                }
-            } else {
-                // Le processus est vivant
-                printf("Superviseur: Robot %d (PID: %d) est vivant, tout va bien.\n", i, robots[i].pid);
-            }
-        }
-    }
-}
-
 void sigchld_handler(int signo) {
-    (void)signo;
+    (void)signo; // Eviter l'avertissement non utilisé
+
     pid_t pid;
     int status;
 
@@ -256,8 +233,20 @@ void sigchld_handler(int signo) {
         for (int i = 0; i < NB_ROBOTS; i++) {
             if (robots[i].pid == pid) {
                 robots[i].is_alive = 0;
-                printf("Superviseur: Robot %d (PID: %d) s'est terminé.\n", i, pid);
-                create_robot(i, robots[i].type_robot);
+
+                if (WIFEXITED(status)) {
+                    robots[i].exit_status = WEXITSTATUS(status);
+                } else {
+                    robots[i].exit_status = 1; // Autre type de terminaison, considérer comme une erreur
+                }
+
+                printf("Superviseur: Robot %d (PID: %d) s'est terminé avec statut %d.\n", i, pid, robots[i].exit_status);
+
+                // Redémarrer le robot s'il s'est terminé avec un code différent de 0
+                if (robots[i].exit_status != 0) {
+                    printf("Superviseur: Redémarrage du robot %d (PID: %d).\n", i, pid);
+                    create_robot(i, robots[i].type_robot);
+                }
                 break;
             }
         }
