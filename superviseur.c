@@ -118,6 +118,9 @@ void superviseur_init(int argc, char *argv[]) {
     // Entrer dans la boucle principale du superviseur
     superviseur_loop();
 
+    // Attendre que tous les robots ont envoyé leur signal de vie
+    sleep(3);
+
     // Après superviseur_loop, toutes les tâches sont terminées
     // Envoyer SIGTERM à tous les robots pour les arrêter
     printf("Superviseur: Envoi de SIGTERM à tous les robots.\n");
@@ -227,14 +230,9 @@ void check_robots_alive() {
             if (kill(robots[i].pid, 0) == -1) {
                 if (errno == ESRCH) {
                     // Le processus n'existe plus
-                    if (!tasks_done) {
-                        printf("Superviseur: Robot %d (PID: %d) est mort, création d'un nouveau robot.\n", i, robots[i].pid);
-                        robots[i].is_alive = 0;
-                        create_robot(i, robots[i].type_robot);
-                    } else {
-                        printf("Superviseur: Robot %d (PID: %d) est mort.\n", i, robots[i].pid);
-                        robots[i].is_alive = 0;
-                    }
+                    printf("Superviseur: Robot %d (PID: %d) est mort, création d'un nouveau robot.\n", i, robots[i].pid);
+                    robots[i].is_alive = 0;
+                    create_robot(i, robots[i].type_robot);
                 } else {
                     // Une autre erreur est survenue
                     perror("Superviseur: Erreur lors de la vérification du robot");
@@ -259,6 +257,7 @@ void sigchld_handler(int signo) {
             if (robots[i].pid == pid) {
                 robots[i].is_alive = 0;
                 printf("Superviseur: Robot %d (PID: %d) s'est terminé.\n", i, pid);
+                create_robot(i, robots[i].type_robot);
                 break;
             }
         }
