@@ -7,13 +7,14 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
-#include <fcntl.h>       // Pour O_* constants
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <semaphore.h>
 #include <string.h>
 #include "structures.h"
 #include "shared_memory.h"
 #include "queue.h"
+#include "superviseur.h"
 
 #define NB_ROBOTS_PAR_TYPE 3
 #define NB_ROBOTS (NB_ROBOTS_PAR_TYPE * 3)
@@ -24,15 +25,6 @@ FileTaches *files_taches; // Mémoire partagée pour les files de tâches
 
 volatile sig_atomic_t tasks_done = 0;
 
-// Déclarations des fonctions
-void superviseur_init(int argc, char *argv[]);
-void create_all_robots();
-void create_robot(int robot_id, int type);
-void check_robots_alive();
-void sigchld_handler(int signo);
-void init_signals();
-void init_taches(int nombre_de_taches);
-void superviseur_loop();
 
 int main(int argc, char *argv[]) {
     superviseur_init(argc, argv);

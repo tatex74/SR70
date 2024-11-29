@@ -8,10 +8,13 @@
 
 
 // Prototypes des fonctions
-void create_robot(int robot_id, int type);
+void superviseur_init(int argc, char *argv[]);
 void create_all_robots();
-void superviseur_init();
+void create_robot(int robot_id, int type);
+void sigchld_handler(int signo);
 void init_signals();
-void check_robots_alive();
+void init_taches(int nombre_de_taches);
+void superviseur_loop();
+
 
 #endif // SUPERVISEUR_H
