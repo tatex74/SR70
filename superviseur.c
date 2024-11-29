@@ -15,8 +15,7 @@
 #include "shared_memory.h"
 #include "queue.h"
 
-#define NB_TACHES 10
-#define NB_ROBOTS_PAR_TYPE 1
+#define NB_ROBOTS_PAR_TYPE 3
 #define NB_ROBOTS (NB_ROBOTS_PAR_TYPE * 3)
 
 Robot robots[NB_ROBOTS]; // Tableau pour suivre les robots
@@ -41,7 +40,7 @@ int main(int argc, char *argv[]) {
 }
 
 void superviseur_init(int argc, char *argv[]) {
-    int nombre_de_taches = NB_TACHES;
+    int nombre_de_taches = NB_ROBOTS; // Initialiser avec une valeur par défaut
 
     if (argc >= 2) {
         nombre_de_taches = atoi(argv[1]);
@@ -54,6 +53,9 @@ void superviseur_init(int argc, char *argv[]) {
     printf("Superviseur: Initialisation du superviseur avec %d tâches.\n", nombre_de_taches);
     init_signals(); // Initialisation des signaux pour gérer SIGCHLD
 
+    // Nettoyer toute mémoire partagée résiduelle avant de créer une nouvelle instance
+    shm_unlink(SHM_FILES_TACHES);
+
     // Initialiser la mémoire partagée pour les files de tâches
     int shm_fd_files_taches = shm_open(SHM_FILES_TACHES, O_CREAT | O_RDWR, 0666);
     if (shm_fd_files_taches == -1) {
@@ -62,11 +64,13 @@ void superviseur_init(int argc, char *argv[]) {
     }
     if (ftruncate(shm_fd_files_taches, sizeof(FileTaches) * 3) == -1) {
         perror("Superviseur: Erreur lors du redimensionnement de la mémoire partagée");
+        shm_unlink(SHM_FILES_TACHES);
         exit(EXIT_FAILURE);
     }
     files_taches = mmap(NULL, sizeof(FileTaches) * 3, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd_files_taches, 0);
     if (files_taches == MAP_FAILED) {
         perror("Superviseur: Erreur lors du mapping de la mémoire partagée");
+        shm_unlink(SHM_FILES_TACHES);
         exit(EXIT_FAILURE);
     }
 
@@ -75,9 +79,9 @@ void superviseur_init(int argc, char *argv[]) {
         files_taches[i].head = 0;
         files_taches[i].tail = 0;
 
-        // Générer des noms fixes pour les sémaphores
-        snprintf(files_taches[i].mutex_name, 64, "/mutex_sem_%d", i);
-        snprintf(files_taches[i].items_name, 64, "/items_sem_%d", i);
+        // Générer des noms uniques pour les sémaphores en incluant le PID du superviseur
+        snprintf(files_taches[i].mutex_name, 64, "/mutex_sem_%d_%d", getpid(), i);
+        snprintf(files_taches[i].items_name, 64, "/items_sem_%d_%d", getpid(), i);
 
         // Supprimer les sémaphores existants s'ils existent
         sem_unlink(files_taches[i].mutex_name);
@@ -89,6 +93,12 @@ void superviseur_init(int argc, char *argv[]) {
 
         if (mutex == SEM_FAILED || items == SEM_FAILED) {
             perror("Superviseur: Erreur lors de l'initialisation des sémaphores");
+            // Nettoyage avant de quitter
+            for (int j = 0; j <= i; j++) {
+                sem_unlink(files_taches[j].mutex_name);
+                sem_unlink(files_taches[j].items_name);
+            }
+            shm_unlink(SHM_FILES_TACHES);
             exit(EXIT_FAILURE);
         }
 

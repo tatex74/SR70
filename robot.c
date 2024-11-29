@@ -11,6 +11,7 @@
 #include "structures.h"
 #include "shared_memory.h"
 #include "queue.h"
+#include "robot.h"
 
 int robot_id;
 TypeTache robot_type;
@@ -18,8 +19,22 @@ FileTaches *files_taches;
 
 // Gestionnaire pour le signal SIGTERM
 void handle_sigterm(int signo) {
-    printf("Robot %d de type %d reçoit SIGTERM, s'arrête.\n", robot_id, robot_type);
+    printf("Robot %d de type %s reçoit SIGTERM, s'arrête.\n", robot_id, type_robot_to_string(robot_type));
     exit(0);
+}
+
+// une fonction pour mettre le type en string
+char *type_robot_to_string(TypeTache type) {
+    switch (type) {
+        case ASSEMBLAGE:
+            return "ASSEMBLAGE";
+        case PEINTURE:
+            return "PEINTURE";
+        case VERIFICATION:
+            return "VERIFICATION";
+        default:
+            return "UNKNOWN";
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -31,7 +46,7 @@ int main(int argc, char *argv[]) {
     robot_id = atoi(argv[1]);
     robot_type = atoi(argv[2]);
 
-    printf("Robot %d de type %d démarré.\n", robot_id, robot_type);
+    printf("Robot %d de type %s démarré.\n", robot_id, type_robot_to_string(robot_type));
 
     // Installer le gestionnaire de signal pour SIGTERM
     struct sigaction sa_term;
@@ -62,13 +77,13 @@ int main(int argc, char *argv[]) {
         if (retirer_tache(&files_taches[robot_type], &tache)) {
             // Simuler une panne aléatoire
             if (rand() % 10 == 0) {
-                printf("Robot %d de type %d est tombé en panne en traitant la tâche %d.\n", robot_id, robot_type, tache.id);
+                printf("Robot %d de type %s est tombé en panne en traitant la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
                 // Le robot termine
                 exit(EXIT_FAILURE);
             }
 
             // Exécuter la tâche
-            printf("Robot %d de type %d exécute la tâche %d.\n", robot_id, robot_type, tache.id);
+            printf("Robot %d de type %s exécute la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
             sleep(2); // Simuler le temps de traitement
 
             // Mettre à jour le type de la tâche pour l'étape suivante
@@ -82,7 +97,7 @@ int main(int argc, char *argv[]) {
                 ajouter_tache(&files_taches[VERIFICATION], tache);
             } else {
                 // Tâche terminée
-                printf("Robot %d de type %d a terminé la tâche %d.\n", robot_id, robot_type, tache.id);
+                printf("Robot %d de type %s a terminé la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
             }
         }
     }
