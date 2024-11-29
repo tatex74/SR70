@@ -12,8 +12,7 @@
 void create_robot(int robot_id, int type);
 void create_all_robots();
 void superviseur_init();
-void is_alive_received(int signo, siginfo_t *info, void *context);
-void send_signal_to_check_alive();
 void init_signals();
+void check_robots_alive();
 
 #endif // SUPERVISEUR_H
