@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "fonctions.h": "c",
+    "unistd.h": "c",
+    "shared_memory.h": "c",
+    "pthread.h": "c",
+    "signal.h": "c",
+    "structures.h": "c"
+  }
+}

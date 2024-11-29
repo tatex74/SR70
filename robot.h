@@ -1,25 +1,16 @@
-//
-// Created by Bruno on 24/11/2024.
-//
-
 #ifndef ROBOT_H
 #define ROBOT_H
 
+#include <unistd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include "task.h"
 
+void robot_init();
+void is_alive(int signo, siginfo_t *info, void *context);
 
-#define NB_ASSEMBLY_ROBOT 5
-#define NB_PAINTING_ROBOT 5
-#define NB_CARRYING_ROBOT 5
+struct MyData {
+    int index;
+};
 
-void Robot(TaskType task);
-void RobotsInit();
-void waitRobots();
-
-
-#endif //ROBOT_H
+#endif // ROBOT_H
