@@ -84,7 +84,15 @@ int main(int argc, char *argv[]) {
 
             // Exécuter la tâche
             printf("Robot %d de type %s exécute la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
-            sleep(2); // Simuler le temps de traitement
+            
+            // simuler le temps de traitement en fonction du type de tâche
+            if (robot_type == ASSEMBLAGE) {
+                sleep(6);
+            } else if (robot_type == PEINTURE) {
+                sleep(3);
+            } else if (robot_type == VERIFICATION) {
+                sleep(2);
+            }
 
             // Mettre à jour le type de la tâche pour l'étape suivante
             if (robot_type == ASSEMBLAGE) {

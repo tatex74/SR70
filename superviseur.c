@@ -149,7 +149,7 @@ void superviseur_init(int argc, char *argv[]) {
     munmap(files_taches, sizeof(FileTaches) * 3);
     shm_unlink(SHM_FILES_TACHES);
 
-    printf("Superviseur: Toutes les tâches ont été traitées.\n");
+    printf("Superviseur: Terminé.\n");
 }
 
 void init_taches(int nombre_de_taches) {
