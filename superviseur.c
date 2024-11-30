@@ -43,6 +43,7 @@ void superviseur_init(int argc, char *argv[])
     printf("Superviseur: Initialisation avec %d tâches.\n", nombre_de_taches);
 
     init_signals();
+    init_semaphores();
     init_shared_memory();
     init_files_taches();
     init_taches(nombre_de_taches);
@@ -81,7 +82,20 @@ void init_shared_memory()
     for (int i = 0; i < NB_ROBOTS; i++) 
     {
         affectation[i] = -1;
-    } 
+    }
+}
+
+void init_semaphores() 
+{
+    sem_unlink(SEM_MUTEX_TASKS_DONE);
+    sem_t *mutex_tasks_done = sem_open(SEM_MUTEX_TASKS_DONE, O_CREAT | O_EXCL, 0666, 1);
+    if (mutex_tasks_done == SEM_FAILED)
+    {
+        perror("Superviseur: Erreur lors de l'initialisation du sémaphore mutex_tasks_done");
+        cleanup_resources();
+        exit(EXIT_FAILURE);
+    }
+    sem_close(mutex_tasks_done);
 }
 
 void init_files_taches()

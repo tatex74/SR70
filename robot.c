@@ -55,8 +55,6 @@ int main(int argc, char *argv[])
     // Ouvrir le sémaphore
     mutex_tasks_done = open_semaphore(SEM_MUTEX_TASKS_DONE);
 
-    printf("SLIP DE BAIN");
-
     // Initialiser le générateur de nombres aléatoires
     srand(time(NULL));
 

@@ -17,5 +17,6 @@ void superviseur_loop();
 void create_all_robots();
 void create_robot(int robot_id, int type);
 void sigchld_handler();
+void init_semaphores();
 
 #endif // SUPERVISEUR_H
