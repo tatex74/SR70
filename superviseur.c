@@ -24,45 +24,6 @@ int *affectation;
 int *tasks_done = NULL;
 int nombre_de_taches = NB_ROBOTS;
 
-void superviseur_init(int argc, char *argv[]);
-void init_shared_memory();
-void init_semaphores();
-void init_files_taches();
-void cleanup_resources();
-void init_signals();
-void init_taches(int nombre_de_taches);
-void superviseur_loop();
-void create_all_robots();
-void create_robot(int robot_id, int type);
-void sigchld_handler(int signo);
-void* shared_memory_create(const char *name, size_t size);
-
-void* shared_memory_create(const char* shm_name, size_t size)
-{
-    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
-    if (shm_fd == -1)
-    {
-        printf("Erreur lors de la création de la mémoire partagée %s", shm_name);
-        exit(EXIT_FAILURE);
-    }
-
-    if (ftruncate(shm_fd, size) == -1)
-    {
-        printf("Erreur lors du redimensionnement de la mémoire partagée %s", shm_name);
-        shm_unlink(shm_name);
-        exit(EXIT_FAILURE);
-    }
-
-    void* addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-    if (addr == MAP_FAILED)
-    {
-        printf("Erreur lors du mappage de la mémoire partagée %s", shm_name);
-        shm_unlink(shm_name);
-        exit(EXIT_FAILURE);
-    }
-
-    return addr;
-}
 
 int main(int argc, char *argv[])
 {
