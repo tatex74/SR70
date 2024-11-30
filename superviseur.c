@@ -42,8 +42,6 @@ void superviseur_init(int argc, char *argv[])
 
     printf("Superviseur: Initialisation avec %d tâches.\n", nombre_de_taches);
 
-    cleanup_resources();
-
     init_signals();
     init_shared_memory();
     init_files_taches();
