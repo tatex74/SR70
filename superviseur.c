@@ -117,18 +117,13 @@ void superviseur_init(int argc, char *argv[]) {
     // Envoyer SIGTERM à tous les robots pour les arrêter
     printf("Superviseur: Envoi de SIGTERM à tous les robots.\n");
     for (int i = 0; i < NB_ROBOTS; i++) {
-        if (robots[i].is_alive) {
-            kill(robots[i].pid, SIGTERM);
-        }
+        kill(robots[i].pid, SIGTERM);
     }
 
     // Attendre que tous les robots se terminent
     for (int i = 0; i < NB_ROBOTS; i++) {
-        if (robots[i].is_alive) {
-            waitpid(robots[i].pid, NULL, 0);
-            robots[i].is_alive = 0;
-            printf("Superviseur: Robot %d (PID: %d) a été terminé.\n", i, robots[i].pid);
-        }
+        waitpid(robots[i].pid, NULL, 0);
+        printf("Superviseur: Robot %d (PID: %d) a été terminé.\n", i, robots[i].pid);
     }
 
     // Nettoyage des sémaphores nommés
@@ -156,7 +151,7 @@ void init_taches(int nombre_de_taches) {
 
 void superviseur_loop() {
     while (1) {
-        // Vérifier si toutes les tâches ont été traitées
+        // Vérifier si toutes les tâches ont été traitées, booleen
         int taches_restantes = 0;
         for (int i = 0; i < 3; i++) {
             sem_t *mutex = sem_open(files_taches[i].mutex_name, 0);
@@ -207,7 +202,6 @@ void create_robot(int robot_id, int type) {
     } else {
         // Processus parent (superviseur)
         robots[robot_id].pid = pid;
-        robots[robot_id].is_alive = 1;
         robots[robot_id].type_robot = type; // Initialiser le type du robot
         printf("Superviseur: Robot %d créé avec PID %d\n", robot_id, pid);
     }
@@ -224,7 +218,6 @@ void sigchld_handler(int signo) {
         // Trouver le robot correspondant
         for (int i = 0; i < NB_ROBOTS; i++) {
             if (robots[i].pid == pid) {
-                robots[i].is_alive = 0;
 
                 if (WIFEXITED(status)) {
                     robots[i].exit_status = WEXITSTATUS(status);

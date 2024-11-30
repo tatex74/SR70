@@ -34,7 +34,6 @@ typedef struct {
     int id;                          // Identifiant unique du robot
     TypeTache type_robot;            // Type du robot
     pid_t pid;                       // PID du processus du robot
-    volatile sig_atomic_t is_alive;  // Indique si le robot est vivant
     volatile sig_atomic_t exit_status; // Statut de sortie du robot
 } Robot;
 
