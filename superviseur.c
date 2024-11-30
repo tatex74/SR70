@@ -8,9 +8,9 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <semaphore.h>
 #include <string.h>
+#include <sys/shm.h>
 #include "structures.h"
 #include "shared_memory.h"
 #include "queue.h"
@@ -21,7 +21,6 @@ FileTaches *files_taches;
 int *affectation;
 int *tasks_done = NULL;
 int nombre_de_taches = NB_ROBOTS;
-
 
 int main(int argc, char *argv[])
 {
@@ -123,12 +122,23 @@ void cleanup_resources()
         sem_unlink(files_taches[i].items_name);
     }
 
-    munmap(files_taches, sizeof(FileTaches) * NB_FILES_TACHES);
-    shm_unlink(SHM_FILES_TACHES);
-    munmap(affectation, sizeof(int) * NB_ROBOTS);
-    shm_unlink(SHM_AFFECTATION);
-    munmap(tasks_done, sizeof(int));
-    shm_unlink(SHM_TASKS_DONE);
+    if (files_taches != NULL)
+    {
+        shmdt(files_taches);
+    }
+    remove_shared_memory(SHM_FILES_TACHES);
+
+    if (affectation != NULL)
+    {
+        shmdt(affectation);
+    }
+    remove_shared_memory(SHM_AFFECTATION);
+
+    if (tasks_done != NULL)
+    {
+        shmdt(tasks_done);
+    }
+    remove_shared_memory(SHM_TASKS_DONE);
 }
 
 void init_signals()

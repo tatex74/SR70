@@ -1,26 +1,92 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <semaphore.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <string.h>
+#include <errno.h>
 #include "shared_memory.h"
+#include "constantes.h"
+
+// Fonction pour mapper le nom de la mémoire partagée à un projet ID unique pour ftok
+int get_shm_proj_id(const char *name)
+{
+    if (strcmp(name, SHM_FILES_TACHES) == 0)
+        return 1;
+    else if (strcmp(name, SHM_AFFECTATION) == 0)
+        return 2;
+    else if (strcmp(name, SHM_TASKS_DONE) == 0)
+        return 3;
+    else
+        return 4; // ID par défaut ou erreur
+}
 
 void *open_shared_memory(const char *name, size_t size)
 {
-    int shm_fd = shm_open(name, O_RDWR, 0666);
-    if (shm_fd == -1)
+    key_t key = ftok("/tmp", get_shm_proj_id(name));
+    if (key == -1)
     {
-        perror("Erreur lors de l'ouverture de la mémoire partagée");
+        perror("ftok failed in open_shared_memory");
         exit(EXIT_FAILURE);
     }
 
-    void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-    if (addr == MAP_FAILED)
+    int shm_id = shmget(key, size, 0666);
+    if (shm_id == -1)
     {
-        perror("Erreur lors du mapping de la mémoire partagée");
+        perror("shmget failed in open_shared_memory");
         exit(EXIT_FAILURE);
+    }
+
+    void *addr = shmat(shm_id, NULL, 0);
+    if (addr == (void *) -1)
+    {
+        perror("shmat failed in open_shared_memory");
+        exit(EXIT_FAILURE);
+    }
+
+    return addr;
+}
+
+void* shared_memory_create(const char* name, size_t size)
+{
+    key_t key = ftok("/tmp", get_shm_proj_id(name));
+    if (key == -1)
+    {
+        perror("ftok failed in shared_memory_create");
+        exit(EXIT_FAILURE);
+    }
+
+    int shm_id = shmget(key, size, IPC_CREAT | IPC_EXCL | 0666);
+    if (shm_id == -1)
+    {
+        if (errno == EEXIST)
+        {
+            // La mémoire partagée existe déjà, essayer de l'ouvrir
+            shm_id = shmget(key, size, 0666);
+            if (shm_id == -1)
+            {
+                perror("shmget failed to open existing shared memory in shared_memory_create");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            perror("shmget failed in shared_memory_create");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void *addr = shmat(shm_id, NULL, 0);
+    if (addr == (void *) -1)
+    {
+        perror("shmat failed in shared_memory_create");
+        exit(EXIT_FAILURE);
+    }
+
+    // Si créé nouvellement, initialiser la mémoire à zéro
+    if (errno != EEXIST)
+    {
+        memset(addr, 0, size);
     }
 
     return addr;
@@ -37,29 +103,24 @@ sem_t *open_semaphore(const char *name)
     return sem;
 }
 
-void* shared_memory_create(const char* shm_name, size_t size)
+void remove_shared_memory(const char *name)
 {
-    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
-    if (shm_fd == -1)
+    key_t key = ftok("/tmp", get_shm_proj_id(name));
+    if (key == -1)
     {
-        printf("Erreur lors de la création de la mémoire partagée %s", shm_name);
-        exit(EXIT_FAILURE);
+        perror("ftok failed in remove_shared_memory");
+        return;
     }
 
-    if (ftruncate(shm_fd, size) == -1)
+    int shm_id = shmget(key, 0, 0);
+    if (shm_id == -1)
     {
-        printf("Erreur lors du redimensionnement de la mémoire partagée %s", shm_name);
-        shm_unlink(shm_name);
-        exit(EXIT_FAILURE);
+        perror("shmget failed in remove_shared_memory");
+        return;
     }
 
-    void* addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-    if (addr == MAP_FAILED)
+    if (shmctl(shm_id, IPC_RMID, NULL) == -1)
     {
-        printf("Erreur lors du mappage de la mémoire partagée %s", shm_name);
-        shm_unlink(shm_name);
-        exit(EXIT_FAILURE);
+        perror("shmctl IPC_RMID failed in remove_shared_memory");
     }
-
-    return addr;
 }

@@ -3,10 +3,10 @@
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <semaphore.h>
 #include <string.h>
 #include <time.h>
+#include <sys/shm.h>
 #include "structures.h"
 #include "shared_memory.h"
 #include "queue.h"
@@ -18,6 +18,7 @@ int robot_id;
 TypeTache robot_type;
 FileTaches *files_taches;
 int *affectation;
+int *tasks_done;
 sem_t *mutex_tasks_done;
 
 int main(int argc, char *argv[])
@@ -49,7 +50,7 @@ int main(int argc, char *argv[])
     // Initialiser les mémoires partagées
     files_taches = open_shared_memory(SHM_FILES_TACHES, sizeof(FileTaches) * 3);
     affectation = open_shared_memory(SHM_AFFECTATION, sizeof(int) * NB_ROBOTS);
-    int *tasks_done = open_shared_memory(SHM_TASKS_DONE, sizeof(int));
+    tasks_done = open_shared_memory(SHM_TASKS_DONE, sizeof(int));
 
     // Ouvrir le sémaphore
     mutex_tasks_done = open_semaphore(SEM_MUTEX_TASKS_DONE);
@@ -71,9 +72,9 @@ int main(int argc, char *argv[])
                 printf("Robot %d de type %s est tombé en panne en traitant la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
 
                 // Libérer les ressources avant de quitter
-                munmap(files_taches, sizeof(FileTaches) * 3);
-                munmap(affectation, sizeof(int) * NB_ROBOTS);
-                munmap(tasks_done, sizeof(int));
+                shmdt(files_taches);
+                shmdt(affectation);
+                shmdt(tasks_done);
                 exit(EXIT_FAILURE);
             }
 
@@ -87,6 +88,10 @@ int main(int argc, char *argv[])
 void handle_sigterm()
 {
     printf("Robot %d de type %s reçoit SIGTERM, s'arrête.\n", robot_id, type_robot_to_string(robot_type));
+    // Libérer les mémoires partagées avant de quitter
+    shmdt(files_taches);
+    shmdt(affectation);
+    shmdt(tasks_done);
     exit(0);
 }
 

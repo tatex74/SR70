@@ -1,7 +1,7 @@
 #ifndef CONSTANTES_H
 #define CONSTANTES_H
 
-#define PANNE_PROBABILITE 3 // 1 sur 10 chance de panne
+#define PANNE_PROBABILITE 10 // 1 sur 10 chance de panne
 
 #define SHM_FILES_TACHES "/shm_files_taches"
 #define SHM_AFFECTATION "/shm_affectation"
