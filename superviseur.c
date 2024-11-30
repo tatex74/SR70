@@ -16,10 +16,19 @@
 #include "queue.h"
 #include "superviseur.h"
 
+// Un tableau de robots, chaque robot est un processus
 Robot robots[NB_ROBOTS];
+
+// Un tableau de files de tâches, une file pour chaque type de tâche, elle est partagée entre les robots
 FileTaches *files_taches;
+
+// Un tableau d'affectation, chaque robot est affecté à une tâche, -1 signifie qu'il n'est pas affecté, l'inidice correspond à l'identifiant du robot, il est partagé entre les robots
 int *affectation;
+
+// Un compteur de tâches terminées, il est partagé entre les robots
 int *tasks_done = NULL;
+
+// Nombre de tâches à effectuer au total, par défaut NB_ROBOTS
 int nombre_de_taches = NB_ROBOTS;
 
 int main(int argc, char *argv[])
@@ -28,6 +37,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+/**
+ * Fonction d'initialisation du superviseur.
+ * @param argc Nombre d'arguments.
+ * @param argv Tableau des arguments.
+ */
 void superviseur_init(int argc, char *argv[])
 {
     if (argc >= 2)
@@ -66,10 +80,13 @@ void superviseur_init(int argc, char *argv[])
         printf("Superviseur: Robot %d (PID: %d) terminé.\n", i, robots[i].pid);
     }
 
-    cleanup_resources();
+    cleanup_resources(); // Nettoyer les ressources partagées
     printf("Superviseur: Terminé.\n");
 }
 
+/**
+ * Initialise la mémoire partagée. Une pour les files de tâches, une pour l'affectation des robots et une pour le compteur de tâches terminées.
+ */
 void init_shared_memory()
 {
     
@@ -85,6 +102,10 @@ void init_shared_memory()
     }
 }
 
+
+/**
+ * Initialise le sémaphore mutex_tasks_done pour protéger le compteur de tâches terminées.
+ */
 void init_semaphores() 
 {
     sem_unlink(SEM_MUTEX_TASKS_DONE);
@@ -98,6 +119,15 @@ void init_semaphores()
     sem_close(mutex_tasks_done);
 }
 
+/**
+ * Initialise les files de tâches.
+ * Une file pour chaque type de tâche.
+ * Chaque file est protégée par un mutex et un sémaphore items.
+ * Le mutex protège l'accès à la file et le sémaphore items indique le nombre d'éléments dans la file.
+ * Les sémaphores sont nommés pour être partagés entre les processus.
+ * Les noms des sémaphores sont stockés dans la structure FileTaches.
+ * Les sémaphores sont initialisés à 1 pour le mutex et 0 pour items.
+ */
 void init_files_taches()
 {
     for (int i = 0; i < NB_FILES_TACHES; i++)
@@ -123,6 +153,10 @@ void init_files_taches()
     }
 }
 
+
+/**
+ * Nettoie les ressources partagées.
+ */
 void cleanup_resources()
 {
     for (int i = 0; i < NB_FILES_TACHES; i++)
@@ -150,8 +184,13 @@ void cleanup_resources()
     remove_shared_memory(SHM_TASKS_DONE);
 }
 
+
+/**
+ * Initialise les signaux. Intercepte SIGCHLD pour savoir quand un robot se termine.
+ */
 void init_signals()
 {
+    // Si un robot meurt, on veut le savoir
     if (signal(SIGCHLD, sigchld_handler) == SIG_ERR)
     {
         perror("Superviseur: Erreur lors de l'association de SIGCHLD");
@@ -159,6 +198,11 @@ void init_signals()
     }
 }
 
+/**
+ * Initialise les tâches. Ajoute le nombre de tâches spécifié à la file d'assemblage.
+ * Toutes les tâches commencent par l'assemblage.
+ * @param nombre_de_taches Nombre de tâches à ajouter.
+ */
 void init_taches(int nombre_de_taches)
 {
     for (int i = 0; i < nombre_de_taches; i++)
@@ -170,6 +214,11 @@ void init_taches(int nombre_de_taches)
     }
 }
 
+/**
+ * Boucle principale du superviseur.
+ * Affiche le nombre de tâches terminées
+ * et vérifie si toutes les tâches sont terminées.
+ */
 void superviseur_loop()
 {
     while (*tasks_done < nombre_de_taches)
@@ -180,6 +229,9 @@ void superviseur_loop()
     printf("Superviseur: Toutes les tâches sont terminées.\n");
 }
 
+/**
+ * Crée tous les robots.
+ */
 void create_all_robots()
 {
     int robot_id = 0;
@@ -192,6 +244,13 @@ void create_all_robots()
     }
 }
 
+/**
+ * Crée un robot avec l'identifiant spécifié et le type de tâche.
+ * Le robot est créé en tant que processus fils, on utilise fork et execl.
+ * Le PID du processus est stocké dans le tableau des robots.
+ * @param robot_id Identifiant du robot.
+ * @param type Type de tâche.
+ */
 void create_robot(int robot_id, int type)
 {
     pid_t pid = fork();
@@ -217,6 +276,12 @@ void create_robot(int robot_id, int type)
     }
 }
 
+/**
+ * Gestionnaire de signal pour SIGCHLD.
+ * Permet de savoir quand un robot se termine.
+ * Si le robot se termine avec un code de sortie différent de 0, on le redémarre.
+ * On réaffecte également la tâche si le robot n'a pas terminé correctement.
+ */
 void sigchld_handler()
 {
     pid_t pid;

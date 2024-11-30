@@ -14,11 +14,22 @@
 #include "superviseur.h"
 #include "constantes.h"
 
+// L'id du robot
 int robot_id;
+
+// Le type de tâche que le robot peut traiter
 TypeTache robot_type;
+
+// La file de tâches partagée
 FileTaches *files_taches;
+
+// L'affectation des robots
 int *affectation;
+
+// Le compteur de tâches terminées
 int *tasks_done;
+
+// Mutex pour protéger le compteur de tâches terminées
 sem_t *mutex_tasks_done;
 
 int main(int argc, char *argv[])
@@ -52,7 +63,7 @@ int main(int argc, char *argv[])
     affectation = open_shared_memory(SHM_AFFECTATION, sizeof(int) * NB_ROBOTS);
     tasks_done = open_shared_memory(SHM_TASKS_DONE, sizeof(int));
 
-    // Ouvrir le sémaphore
+    // Ouvrir le sémaphore qui protège le compteur de tâches terminées
     mutex_tasks_done = open_semaphore(SEM_MUTEX_TASKS_DONE);
 
     // Initialiser le générateur de nombres aléatoires
@@ -64,6 +75,7 @@ int main(int argc, char *argv[])
         Tache tache;
         if (retirer_tache(&files_taches[robot_type], &tache))
         {
+            // On signale que le robot traite la tâche
             affectation[robot_id] = tache.id;
 
             // Simuler une panne aléatoire
@@ -79,12 +91,17 @@ int main(int argc, char *argv[])
             }
 
             traiter_tache(&tache, tasks_done);
+
+            // On signale que le robot a terminé la tâche
             affectation[robot_id] = -1;
         }
     }
     return 0;
 }
 
+/**
+ * Intercepte le signal SIGTERM pour terminer le robot.
+ */
 void handle_sigterm()
 {
     printf("Robot %d de type %s reçoit SIGTERM, s'arrête.\n", robot_id, type_robot_to_string(robot_type));
@@ -95,6 +112,11 @@ void handle_sigterm()
     exit(0);
 }
 
+/**
+ * Convertit un type de tâche en chaîne de caractères.
+ * @param type Type de tâche.
+ * @return Chaîne de caractères correspondante.
+ */
 char *type_robot_to_string(TypeTache type)
 {
     switch (type)
@@ -110,6 +132,11 @@ char *type_robot_to_string(TypeTache type)
     }
 }
 
+/**
+ * Traite une tâche en fonction du type de robot.
+ * @param tache Tâche à traiter.
+ * @param tasks_done Pointeur vers le compteur de tâches terminées.
+ */
 void traiter_tache(Tache *tache, int *tasks_done)
 {
     printf("Robot %d de type %s exécute la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache->id);
@@ -123,6 +150,7 @@ void traiter_tache(Tache *tache, int *tasks_done)
         sleep_time = 3;
     }
 
+    // Simuler le temps de traitement
     sleep(sleep_time);
 
 

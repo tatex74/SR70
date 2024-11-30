@@ -9,14 +9,15 @@
 #include "queue.h"
 #include "constantes.h"
 
+/**
+ * Ajoute une tâche à la file de tâches.
+ * @param file File de tâches à modifier.
+ * @param tache Tâche à ajouter.
+ */
 void ajouter_tache(FileTaches *file, Tache tache) {
     // Ouvrir les sémaphores nommés
-    sem_t *mutex = sem_open(file->mutex_name, 0);
-    sem_t *items = sem_open(file->items_name, 0);
-    if (mutex == SEM_FAILED || items == SEM_FAILED) {
-        perror("Erreur lors de l'ouverture des sémaphores");
-        exit(EXIT_FAILURE);
-    }
+    sem_t *mutex = open_semaphore(file->mutex_name);
+    sem_t *items = open_semaphore(file->items_name);
 
     // Verrouiller la file
     sem_wait(mutex);
@@ -43,22 +44,24 @@ void ajouter_tache(FileTaches *file, Tache tache) {
     sem_close(items);
 }
 
+/**
+ * Retire une tâche de la file de tâches.
+ * @param file File de tâches à modifier.
+ * @param tache Pointeur vers la tâche à remplir.
+ * @return 1 si une tâche a été retirée, 0 sinon.
+ */
 int retirer_tache(FileTaches *file, Tache *tache) {
     // Ouvrir les sémaphores nommés
-    sem_t *mutex = sem_open(file->mutex_name, 0);
-    sem_t *items = sem_open(file->items_name, 0);
-    if (mutex == SEM_FAILED || items == SEM_FAILED) {
-        perror("Erreur lors de l'ouverture des sémaphores");
-        exit(EXIT_FAILURE);
-    }
+    sem_t *mutex = open_semaphore(file->mutex_name);
+    sem_t *items = open_semaphore(file->items_name);
 
-    // Attendre qu'un élément soit disponible
+    // Attendre qu'un élément soit disponible, sinon bloquer
     sem_wait(items);
 
     // Verrouiller la file
     sem_wait(mutex);
     if (file->head == file->tail) {
-        // File vide, ceci ne devrait pas arriver
+        // File vide, ceci ne devrait pas arriver etant donné que items est bloqué
         sem_post(mutex);
         sem_close(mutex);
         sem_close(items);

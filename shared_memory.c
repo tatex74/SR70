@@ -8,14 +8,17 @@
 #include "shared_memory.h"
 #include "constantes.h"
 
+/**
+ * Ouvre une mémoire partagée existante.
+ * @param key Clé de la mémoire partagée.
+ * @param size Taille de la mémoire partagée.
+ * @return Pointeur vers la mémoire partagée.
+ */
 void *open_shared_memory(key_t key, size_t size)
 {
+    // Ajouter le PID du processus parent pour éviter les collisions de clés
+    // On met getppid() car cette fonction est appelée par les enfants
     key = key + getppid();
-    if (key == -1)
-    {
-        perror("ftok failed in open_shared_memory");
-        exit(EXIT_FAILURE);
-    }
 
     int shm_id = shmget(key, size, 0666);
     if (shm_id == -1)
@@ -34,8 +37,16 @@ void *open_shared_memory(key_t key, size_t size)
     return addr;
 }
 
+/**
+ * Crée une mémoire partagée.
+ * @param key Clé de la mémoire partagée.
+ * @param size Taille de la mémoire partagée.
+ * @return Pointeur vers la mémoire partagée.
+ */
 void* shared_memory_create(key_t key, size_t size)
 {
+    // Ajouter le PID du processus pour éviter les collisions de clés
+    // On met getpid() car cette fonction est appelée par le parent
     key = key + getpid();
     if (key == -1)
     {
@@ -79,6 +90,11 @@ void* shared_memory_create(key_t key, size_t size)
     return addr;
 }
 
+/**
+ * Ouvre un sémaphore nommé existant.
+ * @param name Nom du sémaphore.
+ * @return Pointeur vers le sémaphore.
+ */
 sem_t *open_semaphore(const char *name)
 {
     sem_t *sem = sem_open(name, 0);
@@ -90,14 +106,15 @@ sem_t *open_semaphore(const char *name)
     return sem;
 }
 
+/**
+ * Supprime une mémoire partagée.
+ * @param key Clé de la mémoire partagée.
+ */
 void remove_shared_memory(key_t key)
 {
+    // Ajouter le PID du processus pour éviter les collisions de clés
+    // On met getpid() car cette fonction est appelée par le parent
     key = key + getpid();
-    if (key == -1)
-    {
-        perror("ftok failed in remove_shared_memory");
-        return;
-    }
 
     int shm_id = shmget(key, 0, 0);
     if (shm_id == -1)
