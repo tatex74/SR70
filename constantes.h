@@ -8,9 +8,9 @@
 #define SHM_TASKS_DONE 25002 // Clé pour la mémoire partagée du compteur de tâches terminées
 #define SEM_MUTEX_TASKS_DONE "/sem_mutex_tasks_done" // Nom du sémaphore pour protéger le compteur de tâches terminées
 
-#define QUEUE_CAPACITY 100  // Capacité maximale de la file de tâches
+#define QUEUE_CAPACITY 10000  // Capacité maximale de la file de tâches
 
-#define NB_ROBOTS_PAR_TYPE 10 // Le nombre de robot par type (10 d'assemblage, 10 de peinture, 10 de vérification)
+#define NB_ROBOTS_PAR_TYPE 30 // Le nombre de robot par type (10 d'assemblage, 10 de peinture, 10 de vérification)
 #define NB_FILES_TACHES 3 // Nombre de files de tâches (car 3 types de tâches)
 #define NB_ROBOTS (NB_ROBOTS_PAR_TYPE * NB_FILES_TACHES) // Le nombre total de robot
 

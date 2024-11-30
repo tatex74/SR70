@@ -14,8 +14,9 @@
  * Ajoute une tâche à la file de tâches.
  * @param file File de tâches à modifier.
  * @param tache Tâche à ajouter.
+ * @return 1 si la tâche a été ajoutée, 0 sinon.
  */
-void ajouter_tache(FileTaches *file, Tache tache) {
+int ajouter_tache(FileTaches *file, Tache tache) {
     // Ouvrir les sémaphores nommés
     sem_t *mutex = open_semaphore(file->mutex_name);
     sem_t *items = open_semaphore(file->items_name);
@@ -29,7 +30,7 @@ void ajouter_tache(FileTaches *file, Tache tache) {
         sem_post(mutex);
         sem_close(mutex);
         sem_close(items);
-        return;
+        return 0;
     }
 
     // Ajouter la tâche au tail
@@ -43,6 +44,7 @@ void ajouter_tache(FileTaches *file, Tache tache) {
     // Fermer les sémaphores
     sem_close(mutex);
     sem_close(items);
+    return 1;
 }
 
 /**

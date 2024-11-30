@@ -210,7 +210,14 @@ void init_taches(int nombre_de_taches)
         Tache tache;
         tache.id = i;
         tache.type_actuel = ASSEMBLAGE;
-        ajouter_tache(&files_taches[ASSEMBLAGE], tache);
+        if (!ajouter_tache(&files_taches[ASSEMBLAGE], tache))
+        {
+            fprintf(stderr, "Erreur: Impossible d'ajouter la tâche %d.\n", i);
+            fprintf(stderr, "Superviseur: Arrêt du programme, la taille maximale est de %d.\n", QUEUE_CAPACITY);
+            fprintf(stderr, "Superviseur: Modifié la constante pour + de capacité.\n");
+            cleanup_resources();
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
