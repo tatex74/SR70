@@ -8,6 +8,7 @@
 #include <string.h>
 #include "queue.h"
 #include "constantes.h"
+#include "shared_memory.h"
 
 /**
  * Ajoute une tâche à la file de tâches.
