@@ -40,11 +40,7 @@ int main(int argc, char *argv[])
     printf("Robot %d de type %s démarré.\n", robot_id, type_robot_to_string(robot_type));
 
     // Installer le gestionnaire de signal pour SIGTERM
-    struct sigaction sa_term;
-    sa_term.sa_handler = handle_sigterm;
-    sigemptyset(&sa_term.sa_mask);
-    sa_term.sa_flags = 0;
-    if (sigaction(SIGTERM, &sa_term, NULL) == -1)
+    if (signal(SIGTERM, handle_sigterm) == SIG_ERR)
     {
         perror("Robot: Erreur lors de l'association de SIGTERM");
         exit(EXIT_FAILURE);
@@ -88,7 +84,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void handle_sigterm(int signo)
+void handle_sigterm()
 {
     printf("Robot %d de type %s reçoit SIGTERM, s'arrête.\n", robot_id, type_robot_to_string(robot_type));
     exit(0);

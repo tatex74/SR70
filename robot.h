@@ -8,7 +8,7 @@
 #include "structures.h"
 
 char *type_robot_to_string(TypeTache type);
-void handle_sigterm(int signo);
+void handle_sigterm();
 void traiter_tache(Tache *tache, int *tasks_done);
 
 #endif // ROBOT_H
