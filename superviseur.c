@@ -16,132 +16,176 @@
 #include "queue.h"
 #include "superviseur.h"
 
-#define NB_ROBOTS_PAR_TYPE 3
-#define NB_ROBOTS (NB_ROBOTS_PAR_TYPE * 3)
+#define NB_FILES_TACHES 3 // Nombre de files de tâches
 
-Robot robots[NB_ROBOTS]; // Tableau pour suivre les robots
+Robot robots[NB_ROBOTS];
+FileTaches *files_taches;
+int *affectation;
+int *tasks_done = NULL;
+int nombre_de_taches = NB_ROBOTS;
 
-FileTaches *files_taches; // Mémoire partagée pour les files de tâches
+void superviseur_init(int argc, char *argv[]);
+void init_shared_memory();
+void init_semaphores();
+void init_files_taches();
+void cleanup_resources();
+void init_signals();
+void init_taches(int nombre_de_taches);
+void superviseur_loop();
+void create_all_robots();
+void create_robot(int robot_id, int type);
+void sigchld_handler(int signo);
+void* shared_memory_create(const char *name, size_t size);
 
-volatile sig_atomic_t tasks_done = 0;
+void* shared_memory_create(const char* shm_name, size_t size)
+{
+    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+    if (shm_fd == -1)
+    {
+        printf("Erreur lors de la création de la mémoire partagée %s", shm_name);
+        exit(EXIT_FAILURE);
+    }
 
+    if (ftruncate(shm_fd, size) == -1)
+    {
+        printf("Erreur lors du redimensionnement de la mémoire partagée %s", shm_name);
+        shm_unlink(shm_name);
+        exit(EXIT_FAILURE);
+    }
 
-int main(int argc, char *argv[]) {
+    void* addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    if (addr == MAP_FAILED)
+    {
+        printf("Erreur lors du mappage de la mémoire partagée %s", shm_name);
+        shm_unlink(shm_name);
+        exit(EXIT_FAILURE);
+    }
+
+    return addr;
+}
+
+int main(int argc, char *argv[])
+{
     superviseur_init(argc, argv);
     return 0;
 }
 
-void superviseur_init(int argc, char *argv[]) {
-    int nombre_de_taches = NB_ROBOTS; // Initialiser avec une valeur par défaut
-
-    if (argc >= 2) {
+void superviseur_init(int argc, char *argv[])
+{
+    if (argc >= 2)
+    {
         nombre_de_taches = atoi(argv[1]);
-        if (nombre_de_taches <= 0) {
+        if (nombre_de_taches <= 0)
+        {
             fprintf(stderr, "Erreur: Le nombre de tâches doit être un entier positif.\n");
             exit(EXIT_FAILURE);
         }
     }
 
-    printf("Superviseur: Initialisation du superviseur avec %d tâches.\n", nombre_de_taches);
-    init_signals(); // Initialisation des signaux pour gérer SIGCHLD
+    printf("Superviseur: Initialisation avec %d tâches.\n", nombre_de_taches);
 
-    // Nettoyer toute mémoire partagée résiduelle avant de créer une nouvelle instance
-    shm_unlink(SHM_FILES_TACHES);
-
-    // Initialiser la mémoire partagée pour les files de tâches
-    int shm_fd_files_taches = shm_open(SHM_FILES_TACHES, O_CREAT | O_RDWR, 0666);
-    if (shm_fd_files_taches == -1) {
-        perror("Superviseur: Erreur lors de la création de la mémoire partagée");
-        exit(EXIT_FAILURE);
-    }
-    if (ftruncate(shm_fd_files_taches, sizeof(FileTaches) * 3) == -1) {
-        perror("Superviseur: Erreur lors du redimensionnement de la mémoire partagée");
-        shm_unlink(SHM_FILES_TACHES);
-        exit(EXIT_FAILURE);
-    }
-    files_taches = mmap(NULL, sizeof(FileTaches) * 3, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd_files_taches, 0);
-    if (files_taches == MAP_FAILED) {
-        perror("Superviseur: Erreur lors du mapping de la mémoire partagée");
-        shm_unlink(SHM_FILES_TACHES);
-        exit(EXIT_FAILURE);
-    }
-
-    // Initialiser les files de tâches
-    for (int i = 0; i < 3; i++) {
-        files_taches[i].head = 0;
-        files_taches[i].tail = 0;
-
-        // Générer des noms uniques pour les sémaphores en incluant le PID du superviseur
-        snprintf(files_taches[i].mutex_name, 64, "/mutex_sem_%d_%d", getpid(), i);
-        snprintf(files_taches[i].items_name, 64, "/items_sem_%d_%d", getpid(), i);
-
-        // Supprimer les sémaphores existants s'ils existent
-        sem_unlink(files_taches[i].mutex_name);
-        sem_unlink(files_taches[i].items_name);
-
-        // Initialiser les sémaphores nommés
-        sem_t *mutex = sem_open(files_taches[i].mutex_name, O_CREAT | O_EXCL, 0666, 1);
-        sem_t *items = sem_open(files_taches[i].items_name, O_CREAT | O_EXCL, 0666, 0);
-
-        if (mutex == SEM_FAILED || items == SEM_FAILED) {
-            perror("Superviseur: Erreur lors de l'initialisation des sémaphores");
-            // Nettoyage avant de quitter
-            for (int j = 0; j <= i; j++) {
-                sem_unlink(files_taches[j].mutex_name);
-                sem_unlink(files_taches[j].items_name);
-            }
-            shm_unlink(SHM_FILES_TACHES);
-            exit(EXIT_FAILURE);
-        }
-
-        // Fermer les sémaphores dans le superviseur
-        sem_close(mutex);
-        sem_close(items);
-    }
-
-    // Initialiser les tâches et les ajouter à la file d'assemblage
+    init_signals();
+    init_shared_memory();
+    init_files_taches();
     init_taches(nombre_de_taches);
-
-    // Créer tous les robots
     create_all_robots();
 
-    sleep(3); // Donne le temps aux robots de s'initialiser
+    sleep(3); // Laisser le temps aux robots de démarrer
 
-    // Entrer dans la boucle principale du superviseur
     superviseur_loop();
 
-    // Attendre que tous les robots ont envoyé leur signal de vie
-    sleep(3);
-
-    // Après superviseur_loop, toutes les tâches sont terminées
-    // Envoyer SIGTERM à tous les robots pour les arrêter
+    // Terminer les robots et nettoyer les ressources
     printf("Superviseur: Envoi de SIGTERM à tous les robots.\n");
-    for (int i = 0; i < NB_ROBOTS; i++) {
+    for (int i = 0; i < NB_ROBOTS; i++)
+    {
         kill(robots[i].pid, SIGTERM);
     }
 
-    // Attendre que tous les robots se terminent
-    for (int i = 0; i < NB_ROBOTS; i++) {
+    for (int i = 0; i < NB_ROBOTS; i++)
+    {
         waitpid(robots[i].pid, NULL, 0);
-        printf("Superviseur: Robot %d (PID: %d) a été terminé.\n", i, robots[i].pid);
+        printf("Superviseur: Robot %d (PID: %d) terminé.\n", i, robots[i].pid);
     }
 
-    // Nettoyage des sémaphores nommés
-    for (int i = 0; i < 3; i++) {
+    cleanup_resources();
+    printf("Superviseur: Terminé.\n");
+}
+
+void init_shared_memory()
+{
+    // Initialiser mémoire partagée
+    files_taches = shared_memory_create(SHM_FILES_TACHES, sizeof(FileTaches) * NB_FILES_TACHES);
+    affectation = shared_memory_create(SHM_AFFECTATION, sizeof(int) * NB_ROBOTS);
+    tasks_done = shared_memory_create(SHM_TASKS_DONE, sizeof(int));
+
+    *tasks_done = 0;
+
+    for (int i = 0; i < NB_ROBOTS; i++)
+        affectation[i] = -1;
+}
+
+void init_files_taches()
+{
+    for (int i = 0; i < NB_FILES_TACHES; i++)
+    {
+        files_taches[i].head = 0;
+        files_taches[i].tail = 0;
+
+        snprintf(files_taches[i].mutex_name, 64, "/mutex_sem_%d_%d", getpid(), i);
+        snprintf(files_taches[i].items_name, 64, "/items_sem_%d_%d", getpid(), i);
+
+        sem_unlink(files_taches[i].mutex_name);
+        sem_unlink(files_taches[i].items_name);
+
+        sem_t *mutex = sem_open(files_taches[i].mutex_name, O_CREAT | O_EXCL, 0666, 1);
+        sem_t *items = sem_open(files_taches[i].items_name, O_CREAT | O_EXCL, 0666, 0);
+
+        if (mutex == SEM_FAILED || items == SEM_FAILED)
+        {
+            perror("Superviseur: Erreur lors de l'initialisation des sémaphores");
+            cleanup_resources();
+            exit(EXIT_FAILURE);
+        }
+
+        sem_close(mutex);
+        sem_close(items);
+    }
+}
+
+void cleanup_resources()
+{
+    for (int i = 0; i < NB_FILES_TACHES; i++)
+    {
         sem_unlink(files_taches[i].mutex_name);
         sem_unlink(files_taches[i].items_name);
     }
 
-    // Nettoyage de la mémoire partagée
-    munmap(files_taches, sizeof(FileTaches) * 3);
+    munmap(files_taches, sizeof(FileTaches) * NB_FILES_TACHES);
     shm_unlink(SHM_FILES_TACHES);
-
-    printf("Superviseur: Terminé.\n");
+    munmap(affectation, sizeof(int) * NB_ROBOTS);
+    shm_unlink(SHM_AFFECTATION);
+    munmap(tasks_done, sizeof(int));
+    shm_unlink(SHM_TASKS_DONE);
 }
 
-void init_taches(int nombre_de_taches) {
-    // Créer les tâches et les ajouter à la file d'assemblage
-    for (int i = 0; i < nombre_de_taches; i++) {
+void init_signals()
+{
+    struct sigaction sa;
+    sa.sa_handler = sigchld_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+
+    if (sigaction(SIGCHLD, &sa, NULL) == -1)
+    {
+        perror("Superviseur: Erreur lors de l'association de SIGCHLD");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void init_taches(int nombre_de_taches)
+{
+    for (int i = 0; i < nombre_de_taches; i++)
+    {
         Tache tache;
         tache.id = i;
         tache.type_actuel = ASSEMBLAGE;
@@ -149,103 +193,88 @@ void init_taches(int nombre_de_taches) {
     }
 }
 
-void superviseur_loop() {
-    while (1) {
-        // Vérifier si toutes les tâches ont été traitées, booleen
-        int taches_restantes = 0;
-        for (int i = 0; i < 3; i++) {
-            sem_t *mutex = sem_open(files_taches[i].mutex_name, 0);
-            if (mutex == SEM_FAILED) {
-                perror("Superviseur: Erreur lors de l'ouverture du sémaphore mutex");
-                exit(EXIT_FAILURE);
-            }
-            sem_wait(mutex);
-            if (files_taches[i].head != files_taches[i].tail) {
-                taches_restantes = 1;
-            }
-            sem_post(mutex);
-            sem_close(mutex);
-        }
-        if (!taches_restantes) {
-            printf("Superviseur: Toutes les tâches ont été traitées.\n");
-            tasks_done = 1;
-            break;
-        }
-        sleep(5); // Intervalle entre les vérifications
+void superviseur_loop()
+{
+    while (*tasks_done < nombre_de_taches)
+    {
+        printf("Superviseur: Tâches terminées: %d\n", *tasks_done);
+        sleep(5);
     }
+    printf("Superviseur: Toutes les tâches sont terminées.\n");
 }
 
-void create_all_robots() {
+void create_all_robots()
+{
     int robot_id = 0;
-    for (int type = 0; type < 3; type++) {
-        for (int i = 0; i < NB_ROBOTS_PAR_TYPE; i++) {
-            create_robot(robot_id, type);
-            robot_id++;
+    for (int type = 0; type < NB_FILES_TACHES; type++)
+    {
+        for (int i = 0; i < NB_ROBOTS_PAR_TYPE; i++)
+        {
+            create_robot(robot_id++, type);
         }
     }
 }
 
-void create_robot(int robot_id, int type) {
+void create_robot(int robot_id, int type)
+{
     pid_t pid = fork();
-    if (pid == -1) {
-        perror("Superviseur: Erreur lors de la création du processus fils");
+    if (pid == -1)
+    {
+        perror("Superviseur: Erreur lors de fork");
         exit(EXIT_FAILURE);
-    } else if (pid == 0) {
-        // Processus fils (robot)
-        char type_str[10];
-        sprintf(type_str, "%d", type);
-        char id_str[10];
-        sprintf(id_str, "%d", robot_id);
+    }
+    else if (pid == 0)
+    {
+        char id_str[10], type_str[10];
+        snprintf(id_str, 10, "%d", robot_id);
+        snprintf(type_str, 10, "%d", type);
         execl("./robot", "./robot", id_str, type_str, NULL);
-        perror("Superviseur: Erreur lors de l'exécution de execl");
+        perror("Superviseur: Erreur execl");
         exit(EXIT_FAILURE);
-    } else {
-        // Processus parent (superviseur)
+    }
+    else
+    {
         robots[robot_id].pid = pid;
-        robots[robot_id].type_robot = type; // Initialiser le type du robot
-        printf("Superviseur: Robot %d créé avec PID %d\n", robot_id, pid);
+        robots[robot_id].type_robot = type;
+        printf("Superviseur: Robot %d créé (PID %d)\n", robot_id, pid);
     }
 }
 
-void sigchld_handler(int signo) {
-    (void)signo; // Eviter l'avertissement non utilisé
-
+void sigchld_handler(int signo)
+{
     pid_t pid;
     int status;
 
-    // Récupère tous les processus enfants terminés
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        // Trouver le robot correspondant
-        for (int i = 0; i < NB_ROBOTS; i++) {
-            if (robots[i].pid == pid) {
-
-                if (WIFEXITED(status)) {
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+    {
+        for (int i = 0; i < NB_ROBOTS; i++)
+        {
+            if (robots[i].pid == pid)
+            {
+                if (WIFEXITED(status))
+                {
                     robots[i].exit_status = WEXITSTATUS(status);
-                } else {
-                    robots[i].exit_status = 1; // Autre type de terminaison, considérer comme une erreur
+                }
+                else
+                {
+                    robots[i].exit_status = 1;
                 }
 
-                printf("Superviseur: Robot %d (PID: %d) s'est terminé avec statut %d.\n", i, pid, robots[i].exit_status);
+                printf("Superviseur: Robot %d (PID: %d) terminé avec statut %d.\n", i, pid, robots[i].exit_status);
 
-                // Redémarrer le robot s'il s'est terminé avec un code différent de 0
-                if (robots[i].exit_status != 0) {
-                    printf("Superviseur: Redémarrage du robot %d (PID: %d).\n", i, pid);
+                if (robots[i].exit_status != 0)
+                {
+                    printf("Superviseur: Redémarrage du robot %d.\n", i);
+                    if (affectation[i] != -1)
+                    {
+                        Tache tache = {affectation[i], robots[i].type_robot};
+                        ajouter_tache(&files_taches[robots[i].type_robot], tache);
+                        printf("Superviseur: Tâche %d réaffectée.\n", tache.id);
+                    }
                     create_robot(i, robots[i].type_robot);
                 }
                 break;
             }
         }
-    }
-}
-
-void init_signals() {
-    struct sigaction sa;
-    sa.sa_handler = sigchld_handler; // Gestionnaire pour SIGCHLD
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("Superviseur: Erreur lors de l'association de SIGCHLD");
-        exit(EXIT_FAILURE);
     }
 }
