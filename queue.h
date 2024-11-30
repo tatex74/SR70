@@ -5,7 +5,6 @@
 
 #include "structures.h"
 
-// Fonctions pour manipuler les files de tâches
 int ajouter_tache(FileTaches *file, Tache tache);
 int retirer_tache(FileTaches *file, Tache *tache);
 

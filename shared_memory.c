@@ -23,14 +23,14 @@ void *open_shared_memory(key_t key, size_t size)
     int shm_id = shmget(key, size, 0666);
     if (shm_id == -1)
     {
-        perror("shmget failed in open_shared_memory");
+        printf("Erreur lors de l'ouverture de la mémoire partagée.\n");
         exit(EXIT_FAILURE);
     }
 
     void *addr = shmat(shm_id, NULL, 0);
     if (addr == (void *) -1)
     {
-        perror("shmat failed in open_shared_memory");
+        printf("Erreur lors de l'attachement de la mémoire partagée.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -48,11 +48,6 @@ void* shared_memory_create(key_t key, size_t size)
     // Ajouter le PID du processus pour éviter les collisions de clés
     // On met getpid() car cette fonction est appelée par le parent
     key = key + getpid();
-    if (key == -1)
-    {
-        perror("ftok failed in shared_memory_create");
-        exit(EXIT_FAILURE);
-    }
 
     int shm_id = shmget(key, size, IPC_CREAT | IPC_EXCL | 0666);
     if (shm_id == -1)
@@ -63,13 +58,13 @@ void* shared_memory_create(key_t key, size_t size)
             shm_id = shmget(key, size, 0666);
             if (shm_id == -1)
             {
-                perror("shmget failed to open existing shared memory in shared_memory_create");
+                printf("Erreur lors de l'ouverture de la mémoire partagée existante.\n");
                 exit(EXIT_FAILURE);
             }
         }
         else
         {
-            perror("shmget failed in shared_memory_create");
+            printf("Erreur lors de la création de la mémoire partagée.\n");
             exit(EXIT_FAILURE);
         }
     }
@@ -77,7 +72,7 @@ void* shared_memory_create(key_t key, size_t size)
     void *addr = shmat(shm_id, NULL, 0);
     if (addr == (void *) -1)
     {
-        perror("shmat failed in shared_memory_create");
+        printf("Erreur lors de l'attachement de la mémoire partagée.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -119,12 +114,12 @@ void remove_shared_memory(key_t key)
     int shm_id = shmget(key, 0, 0);
     if (shm_id == -1)
     {
-        perror("shmget failed in remove_shared_memory");
+        printf("Erreur lors de la récupération de l'ID de la mémoire partagée.\n");
         return;
     }
 
     if (shmctl(shm_id, IPC_RMID, NULL) == -1)
     {
-        perror("shmctl IPC_RMID failed in remove_shared_memory");
+        printf("Erreur lors de la suppression de la mémoire partagée");
     }
 }

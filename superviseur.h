@@ -6,7 +6,6 @@
 #include <semaphore.h>
 #include <string.h>
 
-// Prototypes des fonctions
 void superviseur_init(int argc, char *argv[]);
 void init_shared_memory();
 void init_files_taches();
