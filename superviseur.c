@@ -133,12 +133,7 @@ void cleanup_resources()
 
 void init_signals()
 {
-    struct sigaction sa;
-    sa.sa_handler = sigchld_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-
-    if (sigaction(SIGCHLD, &sa, NULL) == -1)
+    if (signal(SIGCHLD, sigchld_handler) == SIG_ERR)
     {
         perror("Superviseur: Erreur lors de l'association de SIGCHLD");
         exit(EXIT_FAILURE);
@@ -203,7 +198,7 @@ void create_robot(int robot_id, int type)
     }
 }
 
-void sigchld_handler(int signo)
+void sigchld_handler()
 {
     pid_t pid;
     int status;
