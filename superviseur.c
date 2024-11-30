@@ -108,9 +108,6 @@ void init_files_taches()
             cleanup_resources();
             exit(EXIT_FAILURE);
         }
-
-        sem_close(mutex);
-        sem_close(items);
     }
 }
 
