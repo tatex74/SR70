@@ -141,7 +141,6 @@ void traiter_tache(Tache *tache, int *tasks_done)
         sem_wait(mutex_tasks_done);
         printf("Robot %d de type %s a terminé la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache->id);
         (*tasks_done)++;
-        printf("Tâches terminées: %d\n", *tasks_done);
         sem_post(mutex_tasks_done);
     }
 }
