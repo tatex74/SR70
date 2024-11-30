@@ -81,8 +81,10 @@ void init_shared_memory()
 
     *tasks_done = 0;
 
-    for (int i = 0; i < NB_ROBOTS; i++)
+    for (int i = 0; i < NB_ROBOTS; i++) 
+    {
         affectation[i] = -1;
+    } 
 }
 
 void init_files_taches()
@@ -230,6 +232,7 @@ void sigchld_handler(int signo)
                     {
                         Tache tache = {affectation[i], robots[i].type_robot};
                         ajouter_tache(&files_taches[robots[i].type_robot], tache);
+                        affectation[i] = -1;
                         printf("Superviseur: Tâche %d réaffectée.\n", tache.id);
                     }
                     create_robot(i, robots[i].type_robot);

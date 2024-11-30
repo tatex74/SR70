@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -Wall -pthread
 
-all: superviseur robot
+all: clean superviseur robot
 
 superviseur: superviseur.c queue.c shared_memory.c
 	$(CC) $(CFLAGS) -o superviseur superviseur.c queue.c shared_memory.c
