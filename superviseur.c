@@ -72,7 +72,7 @@ void superviseur_init(int argc, char *argv[])
 
 void init_shared_memory()
 {
-    // Initialiser mémoire partagée
+    
     files_taches = shared_memory_create(SHM_FILES_TACHES, sizeof(FileTaches) * NB_FILES_TACHES);
     affectation = shared_memory_create(SHM_AFFECTATION, sizeof(int) * NB_ROBOTS);
     tasks_done = shared_memory_create(SHM_TASKS_DONE, sizeof(int));

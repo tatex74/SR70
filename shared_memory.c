@@ -8,22 +8,9 @@
 #include "shared_memory.h"
 #include "constantes.h"
 
-// Fonction pour mapper le nom de la mémoire partagée à un projet ID unique pour ftok
-int get_shm_proj_id(const char *name)
+void *open_shared_memory(key_t key, size_t size)
 {
-    if (strcmp(name, SHM_FILES_TACHES) == 0)
-        return 1;
-    else if (strcmp(name, SHM_AFFECTATION) == 0)
-        return 2;
-    else if (strcmp(name, SHM_TASKS_DONE) == 0)
-        return 3;
-    else
-        return 4; // ID par défaut ou erreur
-}
-
-void *open_shared_memory(const char *name, size_t size)
-{
-    key_t key = ftok("/tmp", get_shm_proj_id(name));
+    key = key + getppid();
     if (key == -1)
     {
         perror("ftok failed in open_shared_memory");
@@ -47,9 +34,9 @@ void *open_shared_memory(const char *name, size_t size)
     return addr;
 }
 
-void* shared_memory_create(const char* name, size_t size)
+void* shared_memory_create(key_t key, size_t size)
 {
-    key_t key = ftok("/tmp", get_shm_proj_id(name));
+    key = key + getpid();
     if (key == -1)
     {
         perror("ftok failed in shared_memory_create");
@@ -103,9 +90,9 @@ sem_t *open_semaphore(const char *name)
     return sem;
 }
 
-void remove_shared_memory(const char *name)
+void remove_shared_memory(key_t key)
 {
-    key_t key = ftok("/tmp", get_shm_proj_id(name));
+    key = key + getpid();
     if (key == -1)
     {
         perror("ftok failed in remove_shared_memory");
