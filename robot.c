@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
             affectation[robot_id] = tache.id;
 
             // Simuler une panne aléatoire
-            if (rand() % 2 == 0)
+            if (rand() % 10 == 0)
             {
                 printf("Robot %d de type %s est tombé en panne en traitant la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
                 
