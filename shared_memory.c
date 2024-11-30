@@ -7,7 +7,6 @@
 #include <string.h>
 #include "shared_memory.h"
 
-
 void *open_shared_memory(const char *name, size_t size)
 {
     int shm_fd = shm_open(name, O_RDWR, 0666);

@@ -16,8 +16,6 @@
 #include "queue.h"
 #include "superviseur.h"
 
-#define NB_FILES_TACHES 3 // Nombre de files de tâches
-
 Robot robots[NB_ROBOTS];
 FileTaches *files_taches;
 int *affectation;

@@ -4,8 +4,7 @@
 #define STRUCTURES_H
 
 #include <sys/types.h>
-
-#define QUEUE_CAPACITY 100  // Capacité maximale de la file de tâches
+#include "constantes.h"
 
 // Définition des types de tâches
 typedef enum {

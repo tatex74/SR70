@@ -6,10 +6,6 @@
 #include <semaphore.h>
 #include <string.h>
 
-
-#define NB_ROBOTS_PAR_TYPE 10
-#define NB_ROBOTS (NB_ROBOTS_PAR_TYPE * 3)
-
 // Prototypes des fonctions
 void superviseur_init(int argc, char *argv[]);
 void init_shared_memory();

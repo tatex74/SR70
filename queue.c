@@ -7,6 +7,7 @@
 #include <semaphore.h>
 #include <string.h>
 #include "queue.h"
+#include "constantes.h"
 
 void ajouter_tache(FileTaches *file, Tache tache) {
     // Ouvrir les sémaphores nommés

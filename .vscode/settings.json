@@ -8,6 +8,7 @@
     "structures.h": "c",
     "mman.h": "c",
     "types.h": "c",
-    "errno.h": "c"
+    "errno.h": "c",
+    "constantes.h": "c"
   }
 }

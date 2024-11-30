@@ -1,5 +1,3 @@
-// robot.c
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,6 +12,7 @@
 #include "queue.h"
 #include "robot.h"
 #include "superviseur.h"
+#include "constantes.h"
 
 int robot_id;
 TypeTache robot_type;
@@ -31,6 +30,12 @@ int main(int argc, char *argv[])
 
     robot_id = atoi(argv[1]);
     robot_type = atoi(argv[2]);
+
+    if (robot_id < 0 || robot_id >= NB_ROBOTS || robot_type < ASSEMBLAGE || robot_type > VERIFICATION)
+    {
+        fprintf(stderr, "Erreur: Arguments invalides.\n");
+        exit(EXIT_FAILURE);
+    }
 
     printf("Robot %d de type %s démarré.\n", robot_id, type_robot_to_string(robot_type));
 
@@ -65,10 +70,10 @@ int main(int argc, char *argv[])
             affectation[robot_id] = tache.id;
 
             // Simuler une panne aléatoire
-            if (rand() % 10 == 0)
+            if (rand() % PANNE_PROBABILITE == 0)
             {
                 printf("Robot %d de type %s est tombé en panne en traitant la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
-                
+
                 // Libérer les ressources avant de quitter
                 munmap(files_taches, sizeof(FileTaches) * 3);
                 munmap(affectation, sizeof(int) * NB_ROBOTS);
@@ -76,37 +81,12 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
 
-            printf("Robot %d de type %s exécute la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
-            
-            // Simuler le temps de traitement en fonction du type de tâche
-            sleep(robot_type == ASSEMBLAGE ? 6 : (robot_type == PEINTURE ? 3 : 2));
-
-            if (robot_type == ASSEMBLAGE)
-            {
-                tache.type_actuel = PEINTURE;
-                ajouter_tache(&files_taches[PEINTURE], tache);
-            }
-            else if (robot_type == PEINTURE)
-            {
-                tache.type_actuel = VERIFICATION;
-                ajouter_tache(&files_taches[VERIFICATION], tache);
-            }
-            else
-            {
-                sem_wait(mutex_tasks_done);
-                printf("Robot %d de type %s a terminé la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache.id);
-                (*tasks_done)++;
-                printf("Tâches terminées: %d\n", *tasks_done);
-                sem_post(mutex_tasks_done);
-            }
-
+            traiter_tache(&tache, tasks_done);
             affectation[robot_id] = -1;
         }
     }
     return 0;
 }
-
-
 
 void handle_sigterm(int signo)
 {
@@ -126,5 +106,41 @@ char *type_robot_to_string(TypeTache type)
         return "VERIFICATION";
     default:
         return "UNKNOWN";
+    }
+}
+
+void traiter_tache(Tache *tache, int *tasks_done)
+{
+    printf("Robot %d de type %s exécute la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache->id);
+    int sleep_time = 2;
+    if (robot_type == ASSEMBLAGE)
+    {
+        sleep_time = 6;
+    }
+    else if (robot_type == PEINTURE)
+    {
+        sleep_time = 3;
+    }
+
+    sleep(sleep_time);
+
+
+    if (robot_type == ASSEMBLAGE)
+    {
+        tache->type_actuel = PEINTURE;
+        ajouter_tache(&files_taches[PEINTURE], *tache);
+    }
+    else if (robot_type == PEINTURE)
+    {
+        tache->type_actuel = VERIFICATION;
+        ajouter_tache(&files_taches[VERIFICATION], *tache);
+    }
+    else
+    {
+        sem_wait(mutex_tasks_done);
+        printf("Robot %d de type %s a terminé la tâche %d.\n", robot_id, type_robot_to_string(robot_type), tache->id);
+        (*tasks_done)++;
+        printf("Tâches terminées: %d\n", *tasks_done);
+        sem_post(mutex_tasks_done);
     }
 }

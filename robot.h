@@ -9,6 +9,6 @@
 
 char *type_robot_to_string(TypeTache type);
 void handle_sigterm(int signo);
-char *type_robot_to_string(TypeTache type);
+void traiter_tache(Tache *tache, int *tasks_done);
 
 #endif // ROBOT_H
