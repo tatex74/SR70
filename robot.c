@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
     if (robot_id < 0 || robot_id >= NB_ROBOTS || robot_type < ASSEMBLAGE || robot_type > VERIFICATION)
     {
-        fprintf(stderr, "Erreur: Arguments invalides.\n");
+        fprintf(stderr, "Robot : Erreur Arguments invalides.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -54,6 +54,8 @@ int main(int argc, char *argv[])
 
     // Ouvrir le sémaphore
     mutex_tasks_done = open_semaphore(SEM_MUTEX_TASKS_DONE);
+
+    printf("SLIP DE BAIN");
 
     // Initialiser le générateur de nombres aléatoires
     srand(time(NULL));
